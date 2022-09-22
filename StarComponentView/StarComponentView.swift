@@ -26,40 +26,33 @@ import UIKit
 
 /// The method adopted by the object you use to manage user interactions with items in a Star Component.
 protocol StarComponentDelegate: AnyObject {
-    func rate(number: Int)
+    func rate(number: Int, starComponentView: StarComponentView)
 }
 
 /// Object StarComponent use for configuring stars for ratings
-class StarComponentView: UIView {
+final class StarComponentView: UIView {
     // MARK: - Properties
     
     /// The container for a stars.
     private lazy var contentStackView: UIStackView = {
-        let stackView = UIStackView(arrangedSubviews: starButtons)
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-        stackView.alignment = .fill
-        stackView.spacing = 2
-        stackView.distribution = .fillEqually
-        stackView.axis = .horizontal
-        return stackView
-    }()
+        $0.translatesAutoresizingMaskIntoConstraints = false
+        $0.alignment = .fill
+        $0.spacing = 2
+        $0.distribution = .fillEqually
+        $0.axis = .horizontal
+        return $0
+    }(UIStackView(arrangedSubviews: starButtons))
     
     /// The array of stars which helps fullfill container for stars
     private var starButtons: [UIButton] = []
     
     /// The type of value which contains maximum stars
-    private var maximumElements: Int = 10
+    let maximumElements: Int = 10
     
     /// The type of value which contains minimum stars
-    private var minimumElements: Int = 0
+    let minimumElements: Int = 3
     
-    /// Changes the star component layout and maximum stars.
-    /// - parameter setMax: The type of the value which sets maximum stars.
-    public var setMax: Int = 0 {
-        didSet {
-            configureStars(maximumStars: setMax)
-        }
-    }
+    private var currentNumberOfElements: Int = 3
     
     /// Changes the star component rate.
     /// - parameter rate: The type of the value which sets rate.
@@ -78,13 +71,19 @@ class StarComponentView: UIView {
     init(maximumStars: Int) {
         super.init(frame: .zero)
         
-        configureStars(maximumStars: maximumStars)
-        
+        configureStars(starsCount: maximumStars)
         setupUI()
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    /// Changes the star component layout and maximum stars.
+    /// - parameter starsCount: The type of the value which sets maximum stars.
+    ///
+    func setCurrentStarsCount(starsCount: Int) {
+        configureStars(starsCount: starsCount)
     }
     
     // MARK: - Setup UI
@@ -99,24 +98,21 @@ class StarComponentView: UIView {
         ])
     }
     
-    
     // MARK: - Private
 
     /// This functions responsible for configuring Stars and also has own constraints for example in Task
     /// - parameter maximumStars: The type of the value to to setting maximum stars.
-    private func configureStars(maximumStars: Int) {
-        if maximumStars > 10 {
-            assert(maximumStars > 10, "You cannot set maximum stars greater then 10")
-            maximumElements = 10
-        } else if maximumStars < 3 {
-            assert(maximumStars < 3, "You cannot set maximum stars less then minimum stars")
-            maximumElements = 10
-        } else {
-            maximumElements = maximumStars
+    private func configureStars(starsCount: Int) {
+        if starsCount > maximumElements || starsCount < minimumElements {
+            assert(starsCount > maximumElements, "You cannot set maximum stars greater then \(maximumElements) or less then \(minimumElements)")
+            currentNumberOfElements = maximumElements
+            
+            return
         }
         
+        currentNumberOfElements = starsCount
+        
         contentStackView.arrangedSubviews.forEach {
-            contentStackView.removeArrangedSubview($0)
             $0.removeFromSuperview()
         }
         
@@ -130,13 +126,12 @@ class StarComponentView: UIView {
     /// This functions responsible configuring buttons, depends on how much set on maximum element
     private func configureButtons() -> [UIButton] {
         var buttons: [UIButton] = []
-        for index in minimumElements..<maximumElements {
-            let starButton = UIButton(frame: CGRect(x: .zero, y: .zero, width: 30, height: 30))
+        for _ in 0..<currentNumberOfElements {
+            let starButton = UIButton(frame: .zero)
             starButton.setImage(UIImage(systemName: "star"), for: .normal)
             starButton.addTarget(self,
                                  action: #selector(tapOnAStar(sender:)),
                                  for: .touchUpInside)
-            starButton.tag = index
             buttons.append(starButton)
         }
         
@@ -147,12 +142,8 @@ class StarComponentView: UIView {
     /// - parameter number: The type of the value returns count of elements on which you tap.
     /// For example you tap on a third star and then you fill 3 stars
     private func configureRating(number: Int) {
-        for star in starButtons {
-            if star.tag < number {
-                star.setImage(UIImage(systemName: "star.fill"), for: .normal)
-            } else {
-                star.setImage(UIImage(systemName: "star"), for: .normal)
-            }
+        for index in 0...currentNumberOfElements - 1 {
+            starButtons[index].setImage(UIImage(systemName: index < number ? "star.fill" : "star"), for: .normal)
         }
     }
     
@@ -161,15 +152,12 @@ class StarComponentView: UIView {
     /// This function responsible for a UIAction event when you tap on star you rate a product
     /// - parameter sender: returns tag because I set it for simplify setting image.
     @objc private func tapOnAStar(sender: UIButton) {
-        for star in starButtons {
-            if star.tag <= sender.tag {
-                star.setImage(UIImage(systemName: "star.fill"), for: .normal)
-            } else {
-                star.setImage(UIImage(systemName: "star"), for: .normal)
-            }
+        guard let number = starButtons.firstIndex(of: sender) else {
+            return
         }
         
-        delegate?.rate(number: sender.tag + 1)
+        configureRating(number: number + 1)
+        delegate?.rate(number: number + 1, starComponentView: self)
     }
 }
 

@@ -28,18 +28,20 @@ class ViewController: UIViewController {
             starComponentView.centerXAnchor.constraint(equalTo: view.centerXAnchor)
         ])
         
-        starComponentView.setMax = 11
+        starComponentView.setCurrentStarsCount(starsCount: 10)
     }
 }
 
 // MARK: - StarComponentDelegate
 
 extension ViewController: StarComponentDelegate {
-    func rate(number: Int) {
+    
+    func rate(number: Int, starComponentView: StarComponentView) {
         let alert = UIAlertController(title: "Cool!", message: "You rate this with \(number)", preferredStyle: .alert)
         let ok = UIAlertAction(title: "OK", style: .default, handler: nil)
         
         alert.addAction(ok)
         present(alert, animated: true, completion: nil)
     }
+    
 }
